@@ -9,4 +9,6 @@ dependencies = [
     "openpyxl",
     "numpy",
     "harbor",
+    "anthropic>=0.92.0",
+    "rich>=13.0",
 ]
