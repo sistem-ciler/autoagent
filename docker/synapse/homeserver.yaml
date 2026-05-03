@@ -1,0 +1,67 @@
+# Synapse production homeserver config — SRV-HTZNR-EU-SWS
+# TLS terminated by Caddy; Synapse listens plain HTTP internally.
+# Replace all CHANGE_ME_ placeholders before first boot.
+
+server_name: "matrix.${DOMAIN:-hexsec.dev}"
+public_baseurl: "https://matrix.${DOMAIN:-hexsec.dev}"
+pid_file: /data/homeserver.pid
+
+listeners:
+  - port: 8008
+    tls: false
+    type: http
+    x_forwarded: true
+    bind_addresses: ['0.0.0.0']
+    resources:
+      - names: [client, federation]
+        compress: false
+  - port: 9093
+    type: metrics
+    bind_addresses: ['0.0.0.0']
+
+database:
+  name: psycopg2
+  args:
+    user: synapse_user
+    password: CHANGE_ME_synapse_db_password
+    database: synapse
+    host: postgres
+    port: 5432
+    cp_min: 5
+    cp_max: 10
+
+media_store_path: /data/media_store
+uploads_path: /data/uploads
+
+enable_registration: false
+registration_shared_secret: "CHANGE_ME_registration_secret_32chars"
+
+report_stats: false
+
+signing_key_path: "/data/matrix.signing.key"
+trusted_key_servers:
+  - server_name: "matrix.org"
+
+log_config: "/data/log.config"
+
+no_tls: true
+
+enable_metrics: true
+
+# E2EE defaults
+encryption_enabled_by_default_for_room_type: all
+
+# Rate limiting
+rc_messages_per_second: 0.2
+rc_message_burst_count: 10
+
+# Media
+max_upload_size: 50M
+max_image_pixels: 32M
+
+# Retention
+retention:
+  enabled: true
+  default_policy:
+    min_lifetime: 1d
+    max_lifetime: 1y
