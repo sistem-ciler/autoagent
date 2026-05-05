@@ -1,7 +1,7 @@
 version: "3.9"
 
 # ─────────────────────────────────────────────────────────────────────────────
-# SRV-HTZNR-EU-SWS  ·  single-host production stack  ·  rev.03  ·  2026-05-03
+# SRV-HTZNR-EU-SWS  ·  single-host production stack  ·  rev.04  ·  2026-05-05
 # Services:  autoagent · cua · trend-radar · synapse
 # Infra:     postgres 16 · redis 7 · minio · caddy 2 · prometheus · grafana · loki
 # Host:      Hetzner CCX52 · Debian 12 · Docker rootless · Falkenstein EU
@@ -27,7 +27,7 @@ volumes:
 
 services:
 
-  # ── Shared Infrastructure ──────────────────────────────────────────────────
+  # ── Shared Infrastructure ─────────────────────────────────────────────────
 
   postgres:
     image: postgres:16-alpine
@@ -80,12 +80,12 @@ services:
       timeout: 10s
       retries: 3
 
-  # ── Application Services ───────────────────────────────────────────────────
+  # ── Application Services ───────────────────────────────────────────────
 
   autoagent:
     build:
       context: .
-      dockerfile: Dockerfile.base
+      dockerfile: Dockerfile
     image: ghcr.io/sistem-ciler/autoagent:latest
     restart: unless-stopped
     env_file: .env
@@ -103,6 +103,22 @@ services:
       timeout: 10s
       retries: 3
       start_period: 15s
+
+  autoagent-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ghcr.io/sistem-ciler/autoagent:latest
+    restart: unless-stopped
+    command: ["celery", "-A", "app.workers.celery_app", "worker", "--loglevel=info", "--concurrency=1"]
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-ops}:${POSTGRES_PASSWORD}@postgres:5432/autoagent
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis: {condition: service_healthy}
+    networks: [internal]
 
   cua:
     image: ghcr.io/sistem-ciler/cua:latest
@@ -172,7 +188,7 @@ services:
       retries: 3
       start_period: 30s
 
-  # ── Edge / Reverse Proxy ────────────────────────────────────────────────────
+  # ── Edge / Reverse Proxy ────────────────────────────────────────────────
 
   caddy:
     image: caddy:2-alpine
@@ -188,7 +204,7 @@ services:
     depends_on: [autoagent, trend-radar, synapse]
     networks: [internal, edge]
 
-  # ── Observability Stack ────────────────────────────────────────────────────
+  # ── Observability Stack ───────────────────────────────────────────────
 
   prometheus:
     image: prom/prometheus:latest
