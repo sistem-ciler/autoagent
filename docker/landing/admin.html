@@ -40,7 +40,9 @@
 
   /* compose */
   .compose{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:24px}
-  .compose h2{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:12px;font-weight:600}
+  .compose h2{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px;font-weight:600}
+  .compose-hint{font-size:12px;color:var(--muted);margin-bottom:12px}
+  .compose-hint span{color:var(--accent)}
   .compose-row{display:flex;gap:10px;flex-wrap:wrap}
   textarea{
     flex:1; min-width:280px; min-height:80px;
@@ -130,9 +132,10 @@
 </section>
 
 <section class="compose">
-  <h2>Submit instruction</h2>
+  <h2>Dispatch instruction</h2>
+  <p class="compose-hint">Agents <span>search the web in real time</span> — they can research competitors, scrape pricing pages, read news, and more.</p>
   <form id="compose-form" class="compose-row">
-    <textarea id="c-instr" placeholder='e.g. "Find 5 SaaS competitors of Loom and summarize their pricing tiers."' required></textarea>
+    <textarea id="c-instr" placeholder='e.g. "Find the top 5 competitors of Notion in 2025, visit their pricing pages, and write a comparison table with monthly costs."' required></textarea>
     <div class="compose-side">
       <select id="c-model">
         <option value="claude-opus-4-7" selected>Opus 4.7 — best</option>
@@ -190,7 +193,7 @@ const fmt = {
   },
   ms: n => n == null ? "—" : (n < 1000 ? n + "ms" : (n/1000).toFixed(1) + "s"),
   cost: (inp, out) => {
-    // Opus 4.7 pricing as anchor: $5/M input, $25/M output
+    // Opus 4.7 pricing: $5/M input, $25/M output
     const usd = (inp/1e6)*5 + (out/1e6)*25;
     return "$" + usd.toFixed(usd < 1 ? 4 : 2);
   },

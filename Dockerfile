@@ -15,7 +15,10 @@ RUN uv pip install --system \
     "sqlalchemy[asyncio]>=2.0.0" \
     "asyncpg>=0.30.0" \
     "pydantic-settings>=2.7.0" \
-    "python-dotenv>=1.0.0"
+    "python-dotenv>=1.0.0" \
+    "httpx>=0.27.0" \
+    "beautifulsoup4>=4.12.0" \
+    "html2text>=2024.2.26"
 
 FROM deps AS final
 COPY app/ ./app/
