@@ -1,4 +1,4 @@
-# SRV-HTZNR-EU-SWS  ·  single-host production stack  ·  rev.11  ·  2026-05-09
+# SRV-HTZNR-EU-SWS  ·  single-host production stack  ·  rev.12  ·  2026-05-09
 # Services:  autoagent · trend-radar · synapse
 # Infra:     postgres 16 · redis 7 · minio · caddy 2 · prometheus · grafana · loki
 # Host:      Hetzner CCX52 · Debian 12 · Docker · Falkenstein EU
@@ -148,7 +148,7 @@ services:
     networks: [internal, edge]
     expose: ["3000"]
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health >/dev/null || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/api/health >/dev/null || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -186,7 +186,7 @@ services:
     ports:
       - "8448:8448"
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:8008/_synapse/health || exit 1"]
+      test: ["CMD-SHELL", "curl -sf http://localhost:8008/_matrix/client/versions || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
