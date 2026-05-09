@@ -53,14 +53,16 @@ ops.{$DOMAIN} {
 # ─────────────────────────────────────────────────────────────────────
 # Pre-DNS demo access (IP-based, plain HTTP)
 # Catches any request on :80 that doesn't match a named host above.
-# Serves the landing page + path-mounted access to API docs / Grafana.
-# Remove or restrict once DNS is live and Cloudflare is in front.
+# Serves the landing page + admin UI + path-mounted access to API
+# docs / Grafana / Prometheus. Remove or restrict once DNS is live.
 # ─────────────────────────────────────────────────────────────────────
 :80 {
     reverse_proxy /docs autoagent:8080
     reverse_proxy /redoc autoagent:8080
     reverse_proxy /openapi.json autoagent:8080
     reverse_proxy /health autoagent:8080
+    reverse_proxy /tasks autoagent:8080
+    reverse_proxy /tasks/* autoagent:8080
     reverse_proxy /grafana/* grafana:3000
     reverse_proxy /prometheus/* prometheus:9090
     root * /srv/landing
