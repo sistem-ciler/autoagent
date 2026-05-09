@@ -1,4 +1,4 @@
-# SRV-HTZNR-EU-SWS  ·  single-host production stack  ·  rev.07  ·  2026-05-09
+# SRV-HTZNR-EU-SWS  ·  single-host production stack  ·  rev.08  ·  2026-05-09
 # Services:  autoagent · trend-radar · synapse
 # Infra:     postgres 16 · redis 7 · minio · caddy 2 · prometheus · grafana · loki
 # Host:      Hetzner CCX52 · Debian 12 · Docker · Falkenstein EU
@@ -8,11 +8,17 @@
 # and its Dockerfile references scripts/build.sh which doesn't exist
 # in the current source. Sandbox execution on Linux will be reintroduced
 # via ruflo (Docker-in-Docker) or Firecracker/libvirt as a follow-up.
+#
+# NOTE on networks (rev.08): removed `internal: true` flag. That flag
+# blocks ALL outbound traffic for every container on the network, which
+# breaks ACME (caddy → Let's Encrypt), Anthropic API calls (autoagent),
+# RSS fetches (trend-radar), and Matrix federation (synapse). The plain
+# bridge keeps services from being directly reachable from outside without
+# published ports — that is the actual isolation we want.
 
 networks:
   internal:
     driver: bridge
-    internal: true
   edge:
     driver: bridge
 
