@@ -1,11 +1,7 @@
-version: "3.9"
-
-# ─────────────────────────────────────────────────────────────────────────────
-# SRV-HTZNR-EU-SWS  ·  single-host production stack  ·  rev.04  ·  2026-05-05
+# SRV-HTZNR-EU-SWS  ·  single-host production stack  ·  rev.05  ·  2026-05-09
 # Services:  autoagent · cua · trend-radar · synapse
 # Infra:     postgres 16 · redis 7 · minio · caddy 2 · prometheus · grafana · loki
-# Host:      Hetzner CCX52 · Debian 12 · Docker rootless · Falkenstein EU
-# ─────────────────────────────────────────────────────────────────────────────
+# Host:      Hetzner CCX52 · Debian 12 · Docker · Falkenstein EU
 
 networks:
   internal:
@@ -27,7 +23,7 @@ volumes:
 
 services:
 
-  # ── Shared Infrastructure ─────────────────────────────────────────────────
+  # ── Shared Infrastructure ───────────────────────────────────────────────
 
   postgres:
     image: postgres:16-alpine
@@ -80,13 +76,13 @@ services:
       timeout: 10s
       retries: 3
 
-  # ── Application Services ───────────────────────────────────────────────
+  # ── Application Services ─────────────────────────────────────────────
 
   autoagent:
     build:
-      context: .
+      context: /srv/godoman/autoagent
       dockerfile: Dockerfile
-    image: ghcr.io/sistem-ciler/autoagent:latest
+    image: godoman/autoagent:local
     restart: unless-stopped
     env_file: .env
     environment:
@@ -98,17 +94,17 @@ services:
     networks: [internal]
     expose: ["8080"]
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:8080/metrics || exit 1"]
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 15s
+      start_period: 20s
 
   autoagent-worker:
     build:
-      context: .
+      context: /srv/godoman/autoagent
       dockerfile: Dockerfile
-    image: ghcr.io/sistem-ciler/autoagent:latest
+    image: godoman/autoagent:local
     restart: unless-stopped
     command: ["celery", "-A", "app.workers.celery_app", "worker", "--loglevel=info", "--concurrency=1"]
     env_file: .env
@@ -120,35 +116,11 @@ services:
       redis: {condition: service_healthy}
     networks: [internal]
 
-  cua:
-    image: ghcr.io/sistem-ciler/cua:latest
-    restart: unless-stopped
-    env_file: .env
-    environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-ops}:${POSTGRES_PASSWORD}@postgres:5432/cua
-      MINIO_ENDPOINT: minio:9000
-      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minio}
-      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
-    depends_on:
-      postgres: {condition: service_healthy}
-      minio: {condition: service_healthy}
-    networks: [internal]
-    expose: ["8443"]
-    ports:
-      - "5900-5910:5900-5910"
-    devices:
-      - /dev/kvm:/dev/kvm
-    security_opt:
-      - seccomp:unconfined
-    healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:8443/metrics || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
-
   trend-radar:
-    image: ghcr.io/sistem-ciler/trend-radar:latest
+    build:
+      context: /srv/godoman/trend-radar
+      dockerfile: Dockerfile
+    image: godoman/trend-radar:local
     restart: unless-stopped
     env_file: .env
     environment:
@@ -165,10 +137,10 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 20s
+      start_period: 30s
 
   synapse:
-    image: ghcr.io/sistem-ciler/synapse:latest
+    image: ghcr.io/element-hq/synapse:latest
     restart: unless-stopped
     environment:
       SYNAPSE_CONFIG_PATH: /config/homeserver.yaml
@@ -188,7 +160,37 @@ services:
       retries: 3
       start_period: 30s
 
-  # ── Edge / Reverse Proxy ────────────────────────────────────────────────
+  cua:
+    build:
+      context: /srv/godoman/cua
+      dockerfile: Dockerfile
+    image: godoman/cua:local
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-ops}:${POSTGRES_PASSWORD}@postgres:5432/cua
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minio}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+    depends_on:
+      postgres: {condition: service_healthy}
+      minio: {condition: service_healthy}
+    networks: [internal]
+    expose: ["8443"]
+    ports:
+      - "5900-5910:5900-5910"
+    devices:
+      - /dev/kvm:/dev/kvm
+    security_opt:
+      - seccomp:unconfined
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8443/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # ── Edge / Reverse Proxy ───────────────────────────────────────────────
 
   caddy:
     image: caddy:2-alpine
