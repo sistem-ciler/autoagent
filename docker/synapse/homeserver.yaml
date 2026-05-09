@@ -44,7 +44,8 @@ signing_key_path: "/data/matrix.signing.key"
 trusted_key_servers:
   - server_name: "matrix.org"
 
-log_config: "/data/log.config"
+# log.config is bind-mounted from docker/synapse/log.config (stdout only)
+log_config: "/tmp/log.config"
 
 no_tls: true
 
