@@ -1,4 +1,4 @@
-# SRV-HTZNR-EU-SWS  ·  single-host production stack  ·  rev.12  ·  2026-05-09
+# SRV-HTZNR-EU-SWS  ·  single-host production stack  ·  rev.13  ·  2026-05-09
 # Services:  autoagent · trend-radar · synapse
 # Infra:     postgres 16 · redis 7 · minio · caddy 2 · prometheus · grafana · loki
 # Host:      Hetzner CCX52 · Debian 12 · Docker · Falkenstein EU
@@ -15,6 +15,10 @@
 # RSS fetches (trend-radar), and Matrix federation (synapse). The plain
 # bridge keeps services from being directly reachable from outside without
 # published ports — that is the actual isolation we want.
+#
+# NOTE on landing (rev.13): caddy now mounts ./docker/landing as /srv/landing
+# to serve a static landing page on bare-IP HTTP (the :80 fallback site
+# block in Caddyfile). Used pre-DNS for customer demos.
 
 networks:
   internal:
@@ -205,6 +209,7 @@ services:
       - "443:443/udp"
     volumes:
       - ./docker/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./docker/landing:/srv/landing:ro
       - caddy_data:/data
       - caddy_config:/config
     depends_on: [autoagent, trend-radar, synapse]
