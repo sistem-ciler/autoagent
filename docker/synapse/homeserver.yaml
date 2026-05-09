@@ -1,9 +1,11 @@
 # Synapse production homeserver config — SRV-HTZNR-EU-SWS
 # TLS terminated by Caddy; Synapse listens plain HTTP internally.
-# Replace all CHANGE_ME_ placeholders before first boot.
+# Placeholders below are substituted at container start by the synapse
+# service's entrypoint (sed against env vars). Do not hand-edit values
+# in this file — change the corresponding env var in .env instead.
 
-server_name: "matrix.${DOMAIN:-hexsec.dev}"
-public_baseurl: "https://matrix.${DOMAIN:-hexsec.dev}"
+server_name: "__SYNAPSE_SERVER_NAME__"
+public_baseurl: "https://__SYNAPSE_SERVER_NAME__"
 pid_file: /data/homeserver.pid
 
 listeners:
@@ -23,7 +25,7 @@ database:
   name: psycopg2
   args:
     user: synapse_user
-    password: CHANGE_ME_synapse_db_password
+    password: "__SYNAPSE_DB_PASSWORD__"
     database: synapse
     host: postgres
     port: 5432
@@ -34,7 +36,7 @@ media_store_path: /data/media_store
 uploads_path: /data/uploads
 
 enable_registration: false
-registration_shared_secret: "CHANGE_ME_registration_secret_32chars"
+registration_shared_secret: "__SYNAPSE_REGISTRATION_SECRET__"
 
 report_stats: false
 
