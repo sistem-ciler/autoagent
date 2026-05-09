@@ -59,15 +59,27 @@ ops.{$DOMAIN} {
 :80 {
     # Autoagent FastAPI — proxy specific paths only (no strip prefix
     # so Swagger UI's absolute /openapi.json reference still resolves).
-    handle /docs       { reverse_proxy autoagent:8080 }
-    handle /redoc      { reverse_proxy autoagent:8080 }
-    handle /openapi.json { reverse_proxy autoagent:8080 }
-    handle /health     { reverse_proxy autoagent:8080 }
+    handle /docs {
+        reverse_proxy autoagent:8080
+    }
+    handle /redoc {
+        reverse_proxy autoagent:8080
+    }
+    handle /openapi.json {
+        reverse_proxy autoagent:8080
+    }
+    handle /health {
+        reverse_proxy autoagent:8080
+    }
 
     # Grafana (sub-path served from /grafana/ per GF_SERVER_SERVE_FROM_SUB_PATH)
-    handle /grafana/*   { reverse_proxy grafana:3000 }
+    handle /grafana/* {
+        reverse_proxy grafana:3000
+    }
     # Prometheus
-    handle /prometheus/* { reverse_proxy prometheus:9090 }
+    handle /prometheus/* {
+        reverse_proxy prometheus:9090
+    }
 
     # Everything else → static landing page
     handle {
