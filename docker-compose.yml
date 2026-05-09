@@ -1,4 +1,4 @@
-# SRV-HTZNR-EU-SWS  ·  single-host production stack  ·  rev.09  ·  2026-05-09
+# SRV-HTZNR-EU-SWS  ·  single-host production stack  ·  rev.10  ·  2026-05-09
 # Services:  autoagent · trend-radar · synapse
 # Infra:     postgres 16 · redis 7 · minio · caddy 2 · prometheus · grafana · loki
 # Host:      Hetzner CCX52 · Debian 12 · Docker · Falkenstein EU
@@ -168,11 +168,13 @@ services:
     entrypoint: ["/bin/sh", "-c"]
     command:
       - >
-        sed
+        chown -R 991:991 /data
+        && sed
         -e "s|__SYNAPSE_SERVER_NAME__|$$SYNAPSE_SERVER_NAME|g"
         -e "s|__SYNAPSE_DB_PASSWORD__|$$SYNAPSE_DB_PASSWORD|g"
         -e "s|__SYNAPSE_REGISTRATION_SECRET__|$$SYNAPSE_REGISTRATION_SECRET|g"
         /template/homeserver.yaml > /data/homeserver.yaml
+        && chown 991:991 /data/homeserver.yaml
         && exec /start.py
     depends_on:
       postgres: {condition: service_healthy}
