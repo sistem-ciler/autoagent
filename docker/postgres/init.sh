@@ -7,7 +7,13 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname postgres <<-EOSQL
     CREATE DATABASE autoagent;
     CREATE DATABASE cua;
     CREATE DATABASE trend_radar;
-    CREATE DATABASE synapse;
+    -- Synapse REQUIRES LC_COLLATE='C' and LC_CTYPE='C'; this must be set
+    -- at CREATE time (ALTER DATABASE cannot change collation).
+    CREATE DATABASE synapse
+      ENCODING=UTF8
+      LC_COLLATE='C'
+      LC_CTYPE='C'
+      TEMPLATE=template0;
 
     CREATE ROLE autoagent_user  WITH LOGIN PASSWORD '${AUTOAGENT_DB_PASSWORD:-changeme_autoagent}';
     CREATE ROLE cua_user        WITH LOGIN PASSWORD '${CUA_DB_PASSWORD:-changeme_cua}';
@@ -18,12 +24,6 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname postgres <<-EOSQL
     GRANT ALL PRIVILEGES ON DATABASE cua         TO cua_user;
     GRANT ALL PRIVILEGES ON DATABASE trend_radar TO trend_radar_user;
     GRANT ALL PRIVILEGES ON DATABASE synapse     TO synapse_user;
-EOSQL
-
-# Synapse requires a specific LC_COLLATE for its schema
-psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname synapse <<-EOSQL
-    ALTER DATABASE synapse TEMPLATE template0
-        LC_COLLATE 'C' LC_CTYPE 'C';
 EOSQL
 
 echo "[init.sh] Databases and roles created."
