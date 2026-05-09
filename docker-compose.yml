@@ -1,4 +1,4 @@
-# SRV-HTZNR-EU-SWS  ·  single-host production stack  ·  rev.10  ·  2026-05-09
+# SRV-HTZNR-EU-SWS  ·  single-host production stack  ·  rev.11  ·  2026-05-09
 # Services:  autoagent · trend-radar · synapse
 # Infra:     postgres 16 · redis 7 · minio · caddy 2 · prometheus · grafana · loki
 # Host:      Hetzner CCX52 · Debian 12 · Docker · Falkenstein EU
@@ -165,6 +165,9 @@ services:
     volumes:
       - synapse_data:/data
       - ./docker/synapse/homeserver.yaml:/template/homeserver.yaml:ro
+      # stdout-only log config: avoids auto-generated /homeserver.log which
+      # UID 991 (synapse user) cannot write
+      - ./docker/synapse/log.config:/tmp/log.config:ro
     entrypoint: ["/bin/sh", "-c"]
     command:
       - >
