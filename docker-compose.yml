@@ -1,7 +1,13 @@
-# SRV-HTZNR-EU-SWS  ·  single-host production stack  ·  rev.06  ·  2026-05-09
-# Services:  autoagent · cua · trend-radar · synapse
+# SRV-HTZNR-EU-SWS  ·  single-host production stack  ·  rev.07  ·  2026-05-09
+# Services:  autoagent · trend-radar · synapse
 # Infra:     postgres 16 · redis 7 · minio · caddy 2 · prometheus · grafana · loki
 # Host:      Hetzner CCX52 · Debian 12 · Docker · Falkenstein EU
+#
+# NOTE on cua: dropped from rev.07. The upstream cua container expects
+# a macOS host running the lume daemon (Apple Virtualization Framework)
+# and its Dockerfile references scripts/build.sh which doesn't exist
+# in the current source. Sandbox execution on Linux will be reintroduced
+# via ruflo (Docker-in-Docker) or Firecracker/libvirt as a follow-up.
 
 networks:
   internal:
@@ -155,36 +161,6 @@ services:
       - "8448:8448"
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8008/_synapse/health || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
-
-  cua:
-    build:
-      context: /srv/godoman/cua
-      dockerfile: Dockerfile
-    image: godoman/cua:local
-    restart: unless-stopped
-    env_file: .env
-    environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-ops}:${POSTGRES_PASSWORD}@postgres:5432/cua
-      MINIO_ENDPOINT: minio:9000
-      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minio}
-      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
-    depends_on:
-      postgres: {condition: service_healthy}
-      minio: {condition: service_healthy}
-    networks: [internal]
-    expose: ["8443"]
-    ports:
-      - "5900-5910:5900-5910"
-    devices:
-      - /dev/kvm:/dev/kvm
-    security_opt:
-      - seccomp:unconfined
-    healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:8443/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
