@@ -29,12 +29,6 @@ radar.{$DOMAIN} {
     reverse_proxy trend-radar:3000
 }
 
-# cua — computer-use sandbox API
-cua.{$DOMAIN} {
-    import security_headers
-    reverse_proxy cua:8443
-}
-
 # synapse — Matrix client API
 matrix.{$DOMAIN} {
     import security_headers
