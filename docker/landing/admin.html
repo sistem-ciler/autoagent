@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>godoman · admin</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#0a0e1a; --fg:#e8ecf4; --muted:#8892a8;
+    --accent:#7c5cff; --accent-glow:rgba(124,92,255,.18);
+    --card:#121829; --border:rgba(255,255,255,.08);
+    --ok:#3ddc84; --warn:#ffb84a; --err:#ff5577; --info:#5cb8ff;
+  }
+  html,body{height:100%}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,system-ui,sans-serif;
+    background:var(--bg); color:var(--fg);
+    line-height:1.5; font-size:14px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1400px;margin:0 auto;padding:32px 24px}
+  header{display:flex;align-items:center;justify-content:space-between;margin-bottom:32px;flex-wrap:wrap;gap:12px}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:18px;letter-spacing:-.02em}
+  .brand-dot{width:9px;height:9px;border-radius:50%;background:var(--accent);box-shadow:0 0 12px var(--accent)}
+  .nav{display:flex;gap:18px;font-size:13px}
+  .nav a{color:var(--muted);text-decoration:none;transition:color .15s}
+  .nav a:hover{color:var(--fg)}
+  .nav a.active{color:var(--accent)}
+
+  /* stats */
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:24px}
+  .stat{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px}
+  .stat-label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:6px}
+  .stat-value{font-size:24px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+  .stat .accent{color:var(--accent)}
+  .stat .ok{color:var(--ok)}
+  .stat .err{color:var(--err)}
+  .stat .info{color:var(--info)}
+
+  /* compose */
+  .compose{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:24px}
+  .compose h2{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:12px;font-weight:600}
+  .compose-row{display:flex;gap:10px;flex-wrap:wrap}
+  textarea{
+    flex:1; min-width:280px; min-height:80px;
+    background:var(--bg); color:var(--fg);
+    border:1px solid var(--border); border-radius:8px; padding:12px;
+    font:inherit; font-size:14px; resize:vertical;
+  }
+  textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
+  .compose-side{display:flex;flex-direction:column;gap:8px;min-width:180px}
+  select,input[type="text"]{
+    background:var(--bg); color:var(--fg);
+    border:1px solid var(--border); border-radius:8px;
+    padding:10px 12px; font:inherit; font-size:13px;
+  }
+  button{
+    background:var(--accent); color:#fff;
+    border:none; border-radius:8px;
+    padding:10px 16px; font:inherit; font-size:14px; font-weight:600;
+    cursor:pointer; transition:all .15s;
+  }
+  button:hover:not(:disabled){background:#6a4cf0;transform:translateY(-1px)}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  button.secondary{background:transparent;border:1px solid var(--border);color:var(--fg)}
+  button.secondary:hover:not(:disabled){border-color:var(--accent)}
+
+  /* table */
+  .table-card{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+  .toolbar{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid var(--border);gap:12px;flex-wrap:wrap}
+  .toolbar h2{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+  .filters{display:flex;gap:8px;flex-wrap:wrap}
+  .chip{
+    padding:5px 12px; border-radius:20px;
+    background:transparent; border:1px solid var(--border);
+    color:var(--muted); font-size:12px; cursor:pointer;
+    transition:all .15s;
+  }
+  .chip:hover{color:var(--fg)}
+  .chip.active{background:var(--accent);border-color:var(--accent);color:#fff}
+  table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+  th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600;padding:12px 18px;background:rgba(255,255,255,.02)}
+  td{padding:14px 18px;border-top:1px solid var(--border);vertical-align:top}
+  tr.task{cursor:pointer;transition:background .1s}
+  tr.task:hover{background:rgba(124,92,255,.04)}
+  .id-cell{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;color:var(--muted)}
+  .instr-cell{max-width:480px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .badge{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+  .badge::before{content:"";width:6px;height:6px;border-radius:50%}
+  .b-pending{background:rgba(255,184,74,.12);color:var(--warn)}
+  .b-pending::before{background:var(--warn)}
+  .b-running{background:rgba(92,184,255,.12);color:var(--info)}
+  .b-running::before{background:var(--info);animation:pulse 1.5s ease-in-out infinite}
+  .b-done{background:rgba(61,220,132,.12);color:var(--ok)}
+  .b-done::before{background:var(--ok)}
+  .b-failed{background:rgba(255,85,119,.12);color:var(--err)}
+  .b-failed::before{background:var(--err)}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+  .num{color:var(--muted);font-size:13px}
+  .empty{padding:60px 20px;text-align:center;color:var(--muted)}
+  .detail-row{background:rgba(255,255,255,.02)}
+  .detail{padding:18px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;line-height:1.6;white-space:pre-wrap;color:var(--fg);max-height:480px;overflow:auto}
+  .detail.error{color:var(--err)}
+  .detail-meta{font-size:11px;color:var(--muted);margin-bottom:10px;font-family:inherit}
+  .pulse{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 8px var(--ok);animation:pulse 1.5s ease-in-out infinite}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="brand"><span class="brand-dot"></span>godoman · admin</div>
+  <nav class="nav">
+    <a href="/" >home</a>
+    <a href="/admin.html" class="active">tasks</a>
+    <a href="/docs">api</a>
+    <a href="/grafana/login">grafana</a>
+    <span style="color:var(--muted)"><span class="pulse"></span> live</span>
+  </nav>
+</header>
+
+<section class="stats" id="stats">
+  <div class="stat"><div class="stat-label">Total tasks</div><div class="stat-value" id="s-total">—</div></div>
+  <div class="stat"><div class="stat-label">Running</div><div class="stat-value info" id="s-running">—</div></div>
+  <div class="stat"><div class="stat-label">Done</div><div class="stat-value ok" id="s-done">—</div></div>
+  <div class="stat"><div class="stat-label">Failed</div><div class="stat-value err" id="s-failed">—</div></div>
+  <div class="stat"><div class="stat-label">Tokens (in / out)</div><div class="stat-value" id="s-tokens">—</div></div>
+  <div class="stat"><div class="stat-label">Estimated spend</div><div class="stat-value accent" id="s-cost">—</div></div>
+</section>
+
+<section class="compose">
+  <h2>Submit instruction</h2>
+  <form id="compose-form" class="compose-row">
+    <textarea id="c-instr" placeholder='e.g. "Find 5 SaaS competitors of Loom and summarize their pricing tiers."' required></textarea>
+    <div class="compose-side">
+      <select id="c-model">
+        <option value="claude-opus-4-7" selected>Opus 4.7 — best</option>
+        <option value="claude-sonnet-4-6">Sonnet 4.6 — fast</option>
+        <option value="claude-haiku-4-5">Haiku 4.5 — cheap</option>
+      </select>
+      <button type="submit" id="c-submit">Dispatch →</button>
+    </div>
+  </form>
+</section>
+
+<section class="table-card">
+  <div class="toolbar">
+    <h2>Recent tasks</h2>
+    <div class="filters" id="filters">
+      <button class="chip active" data-status="">all</button>
+      <button class="chip" data-status="running">running</button>
+      <button class="chip" data-status="pending">pending</button>
+      <button class="chip" data-status="done">done</button>
+      <button class="chip" data-status="failed">failed</button>
+    </div>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>id</th>
+        <th>status</th>
+        <th>instruction</th>
+        <th>tokens</th>
+        <th>duration</th>
+        <th>created</th>
+      </tr>
+    </thead>
+    <tbody id="tasks-body">
+      <tr><td colspan="6" class="empty">Loading…</td></tr>
+    </tbody>
+  </table>
+</section>
+
+</div>
+
+<script>
+const API = "";  // same origin, Caddy proxies /tasks → autoagent
+let currentStatus = "";
+let openId = null;
+
+const fmt = {
+  int: n => (n ?? 0).toLocaleString(),
+  ago: iso => {
+    const s = (Date.now() - new Date(iso).getTime()) / 1000;
+    if (s < 60) return Math.floor(s) + "s ago";
+    if (s < 3600) return Math.floor(s/60) + "m ago";
+    if (s < 86400) return Math.floor(s/3600) + "h ago";
+    return Math.floor(s/86400) + "d ago";
+  },
+  ms: n => n == null ? "—" : (n < 1000 ? n + "ms" : (n/1000).toFixed(1) + "s"),
+  cost: (inp, out) => {
+    // Opus 4.7 pricing as anchor: $5/M input, $25/M output
+    const usd = (inp/1e6)*5 + (out/1e6)*25;
+    return "$" + usd.toFixed(usd < 1 ? 4 : 2);
+  },
+  esc: s => (s ?? "").replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])),
+};
+
+async function load() {
+  const url = `${API}/tasks?limit=100${currentStatus ? "&status=" + currentStatus : ""}`;
+  let data;
+  try {
+    const r = await fetch(url);
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    data = await r.json();
+  } catch (e) {
+    document.getElementById("tasks-body").innerHTML =
+      `<tr><td colspan="6" class="empty">Failed to load: ${fmt.esc(e.message)}</td></tr>`;
+    return;
+  }
+
+  // stats
+  document.getElementById("s-total").textContent = fmt.int(data.total);
+  document.getElementById("s-running").textContent = fmt.int(data.by_status.running ?? 0);
+  document.getElementById("s-done").textContent = fmt.int(data.by_status.done ?? 0);
+  document.getElementById("s-failed").textContent = fmt.int(data.by_status.failed ?? 0);
+  document.getElementById("s-tokens").textContent =
+    fmt.int(data.total_input_tokens) + " / " + fmt.int(data.total_output_tokens);
+  document.getElementById("s-cost").textContent =
+    fmt.cost(data.total_input_tokens, data.total_output_tokens);
+
+  // table
+  const body = document.getElementById("tasks-body");
+  if (data.tasks.length === 0) {
+    body.innerHTML = `<tr><td colspan="6" class="empty">No tasks yet — dispatch your first instruction above.</td></tr>`;
+    return;
+  }
+
+  body.innerHTML = data.tasks.map(t => {
+    const tokens = (t.input_tokens || 0) + (t.output_tokens || 0);
+    const expanded = t.id === openId;
+    let detail = "";
+    if (expanded) {
+      const meta = `model: ${fmt.esc(t.model)}  ·  in: ${fmt.int(t.input_tokens)}  ·  out: ${fmt.int(t.output_tokens)}  ·  cache: ${fmt.int(t.cache_read_tokens)}  ·  ${fmt.ms(t.duration_ms)}`;
+      const body = t.error
+        ? `<div class="detail error">${fmt.esc(t.error)}</div>`
+        : `<div class="detail">${fmt.esc(t.result || "(no result yet)")}</div>`;
+      detail = `<tr class="detail-row"><td colspan="6"><div class="detail-meta">${meta}</div>${body}</td></tr>`;
+    }
+    return `
+      <tr class="task" data-id="${t.id}">
+        <td class="id-cell">${t.id.slice(0, 8)}</td>
+        <td><span class="badge b-${t.status}">${t.status}</span></td>
+        <td class="instr-cell" title="${fmt.esc(t.instruction)}">${fmt.esc(t.instruction)}</td>
+        <td class="num">${fmt.int(tokens)}</td>
+        <td class="num">${fmt.ms(t.duration_ms)}</td>
+        <td class="num">${fmt.ago(t.created_at)}</td>
+      </tr>${detail}
+    `;
+  }).join("");
+
+  body.querySelectorAll("tr.task").forEach(row => {
+    row.addEventListener("click", () => {
+      const id = row.dataset.id;
+      openId = openId === id ? null : id;
+      load();
+    });
+  });
+}
+
+document.getElementById("filters").addEventListener("click", e => {
+  if (e.target.tagName !== "BUTTON") return;
+  document.querySelectorAll("#filters .chip").forEach(c => c.classList.remove("active"));
+  e.target.classList.add("active");
+  currentStatus = e.target.dataset.status;
+  load();
+});
+
+document.getElementById("compose-form").addEventListener("submit", async e => {
+  e.preventDefault();
+  const btn = document.getElementById("c-submit");
+  const instr = document.getElementById("c-instr").value.trim();
+  const model = document.getElementById("c-model").value;
+  if (!instr) return;
+  btn.disabled = true;
+  btn.textContent = "Dispatching…";
+  try {
+    const r = await fetch(`${API}/tasks`, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({instruction: instr, model}),
+    });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    document.getElementById("c-instr").value = "";
+    await load();
+  } catch (e) {
+    alert("Failed: " + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Dispatch →";
+  }
+});
+
+load();
+setInterval(load, 4000);
+</script>
+</body>
+</html>
