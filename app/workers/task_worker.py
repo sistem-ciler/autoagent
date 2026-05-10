@@ -78,7 +78,6 @@ def execute_task(self, task_id: str, instruction: str, model: str = "claude-opus
     asyncio.run(_update(task_id, status=TaskStatus.running))
 
     client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
-    messages = [{"+role": "user", "content": instruction}]
     messages = [{"role": "user", "content": instruction}]
     steps_log: list[str] = []
     total_input = total_output = total_cache = 0
