@@ -65,10 +65,20 @@ def _serialize_blocks(content) -> list[dict]:
 @celery.task(bind=True, max_retries=3)
 def execute_task(self, task_id: str, instruction: str, model: str = "claude-opus-4-7"):
     t0 = time.time()
+
+    if not settings.anthropic_api_key:
+        asyncio.run(_update(
+            task_id,
+            status=TaskStatus.failed,
+            error="ANTHROPIC_API_KEY is not configured. Add it to your .env file and restart the worker.",
+            duration_ms=0,
+        ))
+        return
+
     asyncio.run(_update(task_id, status=TaskStatus.running))
 
-    client = anthropic.Anthropic(api_key=settings.anthropic_api_key or None)
-
+    client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+    messages = [{"+role": "user", "content": instruction}]
     messages = [{"role": "user", "content": instruction}]
     steps_log: list[str] = []
     total_input = total_output = total_cache = 0
@@ -77,7 +87,6 @@ def execute_task(self, task_id: str, instruction: str, model: str = "claude-opus
         final_text = ""
 
         for step in range(1, MAX_STEPS + 1):
-            # Call Claude with rate-limit retry
             rl_attempt = 0
             while True:
                 try:
@@ -102,7 +111,6 @@ def execute_task(self, task_id: str, instruction: str, model: str = "claude-opus
                     time.sleep(_RL_DELAYS[rl_attempt])
                     rl_attempt += 1
 
-            # Accumulate tokens across turns
             u = response.usage
             total_input += u.input_tokens
             total_output += u.output_tokens
@@ -114,10 +122,8 @@ def execute_task(self, task_id: str, instruction: str, model: str = "claude-opus
                 final_text = "\n".join(b.text for b in response.content if b.type == "text")
                 break
 
-            # Append assistant turn (preserves thinking + tool_use blocks)
             messages.append({"role": "assistant", "content": _serialize_blocks(response.content)})
 
-            # Execute tools and collect results
             tool_results = []
             for tc in tool_blocks:
                 result = execute_tool(tc.name, tc.input)

@@ -1,7 +1,8 @@
-.PHONY: up up-infra up-apps up-obs down ps status logs logs-svc pull deploy backup clean shell
+.PHONY: up up-infra up-apps up-obs down ps status logs logs-svc logs-worker pull update deploy backup clean shell
 
 COMPOSE := docker compose
 SVC     ?= autoagent
+BRANCH  ?= claude/build-money-machine-cWtcY
 
 up:
 	$(COMPOSE) up -d
@@ -10,7 +11,7 @@ up-infra:
 	$(COMPOSE) up -d postgres redis minio
 
 up-apps:
-	$(COMPOSE) up -d autoagent cua trend-radar synapse
+	$(COMPOSE) up -d autoagent autoagent-worker trend-radar synapse
 
 up-obs:
 	$(COMPOSE) up -d caddy prometheus grafana loki promtail
@@ -30,8 +31,19 @@ logs:
 logs-svc:
 	$(COMPOSE) logs -f --tail=200 $(SVC)
 
+logs-worker:
+	$(COMPOSE) logs -f --tail=200 autoagent-worker
+
 pull:
-	$(COMPOSE) pull
+	git pull origin $(BRANCH)
+
+# One-command deploy: pull latest code, rebuild app images, restart services.
+update: pull
+	$(COMPOSE) build autoagent autoagent-worker
+	$(COMPOSE) up -d autoagent autoagent-worker
+	@echo "Waiting 20s for healthchecks..."
+	@sleep 20
+	$(COMPOSE) ps
 
 deploy:
 	./scripts/deploy.sh $(SVC)

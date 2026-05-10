@@ -12,12 +12,6 @@ scrape_configs:
       - targets: [autoagent:8080]
     metrics_path: /metrics
 
-  - job_name: cua
-    static_configs:
-      - targets: [cua:8443]
-    metrics_path: /metrics
-    scheme: http
-
   - job_name: trend-radar
     static_configs:
       - targets: [trend-radar:3000]

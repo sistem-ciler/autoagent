@@ -1,4 +1,4 @@
-# SRV-HTZNR-EU-SWS  ·  single-host production stack  ·  rev.13  ·  2026-05-09
+# SRV-HTZNR-EU-SWS  ·  single-host production stack  ·  rev.14  ·  2026-05-10
 # Services:  autoagent · trend-radar · synapse
 # Infra:     postgres 16 · redis 7 · minio · caddy 2 · prometheus · grafana · loki
 # Host:      Hetzner CCX52 · Debian 12 · Docker · Falkenstein EU
@@ -19,6 +19,9 @@
 # NOTE on landing (rev.13): caddy now mounts ./docker/landing as /srv/landing
 # to serve a static landing page on bare-IP HTTP (the :80 fallback site
 # block in Caddyfile). Used pre-DNS for customer demos.
+#
+# NOTE on build context (rev.14): changed from absolute /srv/godoman/autoagent
+# to relative . so builds work correctly from any environment.
 
 networks:
   internal:
@@ -39,7 +42,7 @@ volumes:
 
 services:
 
-  # ── Shared Infrastructure ───────────────────────────────────────────────
+  # ── Shared Infrastructure ──────────────────────────────────────────────
 
   postgres:
     image: postgres:16-alpine
@@ -95,11 +98,11 @@ services:
       timeout: 10s
       retries: 3
 
-  # ── Application Services ─────────────────────────────────────────────
+  # ── Application Services ───────────────────────────────────────────
 
   autoagent:
     build:
-      context: /srv/godoman/autoagent
+      context: .
       dockerfile: Dockerfile
     image: godoman/autoagent:local
     restart: unless-stopped
@@ -121,7 +124,7 @@ services:
 
   autoagent-worker:
     build:
-      context: /srv/godoman/autoagent
+      context: .
       dockerfile: Dockerfile
     image: godoman/autoagent:local
     restart: unless-stopped
@@ -196,7 +199,7 @@ services:
       retries: 3
       start_period: 30s
 
-  # ── Edge / Reverse Proxy ───────────────────────────────────────────────
+  # ── Edge / Reverse Proxy ───────────────────────────────────────────
 
   caddy:
     image: caddy:2-alpine
@@ -215,7 +218,7 @@ services:
     depends_on: [autoagent, trend-radar, synapse]
     networks: [internal, edge]
 
-  # ── Observability Stack ───────────────────────────────────────────────
+  # ── Observability Stack ───────────────────────────────────────────
 
   prometheus:
     image: prom/prometheus:latest
