@@ -115,7 +115,7 @@
   .steps-toggle{
     background:none;border:none;padding:0;color:var(--muted);font:inherit;
     font-size:11px;cursor:pointer;text-decoration:underline;margin-bottom:8px;
-    display:block;transform:none;
+    display:block;
   }
   .steps-toggle:hover{color:var(--fg);transform:none;background:none}
   .steps-log{
@@ -186,7 +186,7 @@
   <button class="tab-btn" data-tab="schedules">Schedules</button>
 </div>
 
-<!-- ── Tasks tab ──────────────────────────────────────────────────── -->
+<!-- Tasks tab -->
 <div id="tab-tasks">
 
   <section class="compose">
@@ -226,7 +226,7 @@
 
 </div>
 
-<!-- ── Schedules tab ─────────────────────────────────────────────── -->
+<!-- Schedules tab -->
 <div id="tab-schedules" style="display:none">
 
   <section class="sched-form">
@@ -282,7 +282,7 @@
 
 </div>
 
-</div><!-- .wrap -->
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/marked@11/marked.min.js"></script>
 <script>
@@ -324,7 +324,6 @@ const fmt = {
   esc: s => (s ?? "").replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])),
 };
 
-// ── Stats ───────────────────────────────────────────────────────────
 async function loadStats() {
   try {
     const [tr, sr] = await Promise.all([
@@ -341,7 +340,6 @@ async function loadStats() {
   } catch(_) {}
 }
 
-// ── Tasks ────────────────────────────────────────────────────────────
 async function loadTasks() {
   const url = `${API}/tasks?limit=100${currentStatus ? "&status=" + currentStatus : ""}`;
   let data;
@@ -436,7 +434,6 @@ document.getElementById("compose-form").addEventListener("submit", async e => {
   }
 });
 
-// ── Schedules ────────────────────────────────────────────────────────
 async function loadSchedules() {
   let data;
   try {
@@ -456,15 +453,17 @@ async function loadSchedules() {
     return;
   }
 
-  body.innerHTML = data.map(s => `
-    <tr class="sched-row">
+  body.innerHTML = data.map(s => {
+    const statusCls = s.enabled ? "b-active" : "b-paused";
+    const statusLabel = s.enabled ? "active" : "paused";
+    return `<tr class="sched-row">
       <td>
         <strong>${fmt.esc(s.name)}</strong><br>
-        <span class="num" style="font-size:11px;white-space:normal">${fmt.esc(s.instruction.slice(0,90))}${s.instruction.length>90?"…":""}</span>
+        <span class="num" style="font-size:11px">${fmt.esc(s.instruction.slice(0,90))}${s.instruction.length>90?"…":""}</span>
       </td>
       <td class="num">${fmt.esc(s.model.replace("claude-",""))}</td>
       <td class="num">${fmt.interval(s.interval_minutes)}</td>
-      <td><span class="badge ${s.enabled?"b-active":"b-paused'}">${s.enabled?"active":"paused"}</span></td>
+      <td><span class="badge ${statusCls}">${statusLabel}</span></td>
       <td class="num">${fmt.until(s.next_run_at)}</td>
       <td class="num">${s.run_count}</td>
       <td class="actions-cell">
@@ -472,7 +471,8 @@ async function loadSchedules() {
         <button class="secondary sm sched-toggle" data-id="${s.id}" data-enabled="${s.enabled}">${s.enabled?"Pause":"Resume"}</button>
         <button class="danger sm sched-delete" data-id="${s.id}">Delete</button>
       </td>
-    </tr>`).join("");
+    </tr>`;
+  }).join("");
 
   body.querySelectorAll(".sched-run").forEach(btn => {
     btn.addEventListener("click", async e => {
@@ -487,7 +487,7 @@ async function loadSchedules() {
           body: JSON.stringify({instruction: sched.instruction, model: sched.model}),
         });
         document.querySelector('.tab-btn[data-tab="tasks"]').click();
-      } catch(e) { alert("Failed: " + e.message); btn.disabled = false; }
+      } catch(err) { alert("Failed: " + err.message); btn.disabled = false; }
     });
   });
 
@@ -503,7 +503,7 @@ async function loadSchedules() {
         });
         await loadSchedules();
         await loadStats();
-      } catch(e) { alert("Failed: " + e.message); btn.disabled = false; }
+      } catch(err) { alert("Failed: " + err.message); btn.disabled = false; }
     });
   });
 
@@ -516,7 +516,7 @@ async function loadSchedules() {
         await fetch(`${API}/schedules/${btn.dataset.id}`, {method: "DELETE"});
         await loadSchedules();
         await loadStats();
-      } catch(e) { alert("Failed: " + e.message); btn.disabled = false; }
+      } catch(err) { alert("Failed: " + err.message); btn.disabled = false; }
     });
   });
 }
@@ -542,14 +542,13 @@ document.getElementById("sched-create-form").addEventListener("submit", async e 
     document.getElementById("sf-instr").value = "";
     await loadSchedules();
     await loadStats();
-  } catch (e) {
-    alert("Failed: " + e.message);
+  } catch (err) {
+    alert("Failed: " + err.message);
   } finally {
     btn.disabled = false; btn.textContent = "Create schedule →";
   }
 });
 
-// ── Tabs ─────────────────────────────────────────────────────────────
 document.querySelectorAll(".tab-btn").forEach(btn => {
   btn.addEventListener("click", () => {
     document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
@@ -561,7 +560,6 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
   });
 });
 
-// ── Init & polling ───────────────────────────────────────────────────
 function refresh() {
   loadStats();
   const active = document.querySelector(".tab-btn.active").dataset.tab;
