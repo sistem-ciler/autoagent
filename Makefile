@@ -2,7 +2,7 @@
 
 COMPOSE := docker compose
 SVC     ?= autoagent
-BRANCH  ?= claude/build-money-machine-cWtcY
+BRANCH  ?= main
 
 up:
 	$(COMPOSE) up -d
@@ -41,6 +41,7 @@ pull:
 update: pull
 	$(COMPOSE) build autoagent autoagent-worker autoagent-beat
 	$(COMPOSE) up -d autoagent autoagent-worker autoagent-beat
+	$(COMPOSE) restart grafana
 	@echo "Waiting 20s for healthchecks..."
 	@sleep 20
 	$(COMPOSE) ps
