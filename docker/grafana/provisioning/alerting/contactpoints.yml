@@ -7,7 +7,7 @@ contactPoints:
       - uid: matrix-webhook-01
         type: webhook
         settings:
-          url: "${MATRIX_WEBHOOK_URL}"
+          url: "http://localhost:9999/placeholder"
           httpMethod: POST
           title: "{{ .GroupLabels.alertname }}"
           message: "{{ range .Alerts }}{{ .Annotations.summary }}\n{{ end }}"
