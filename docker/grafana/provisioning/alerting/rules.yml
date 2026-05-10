@@ -11,6 +11,9 @@ groups:
         condition: C
         data:
           - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
             datasourceUid: prometheus
             model:
               expr: up{job="autoagent"}
@@ -18,6 +21,9 @@ groups:
               maxDataPoints: 43200
               refId: A
           - refId: C
+            relativeTimeRange:
+              from: 600
+              to: 0
             datasourceUid: __expr__
             model:
               conditions:
@@ -51,6 +57,9 @@ groups:
         condition: C
         data:
           - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
             datasourceUid: prometheus
             model:
               expr: up{job="postgres"}
@@ -58,6 +67,9 @@ groups:
               maxDataPoints: 43200
               refId: A
           - refId: C
+            relativeTimeRange:
+              from: 600
+              to: 0
             datasourceUid: __expr__
             model:
               conditions:
