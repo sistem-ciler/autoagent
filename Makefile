@@ -11,7 +11,7 @@ up-infra:
 	$(COMPOSE) up -d postgres redis minio
 
 up-apps:
-	$(COMPOSE) up -d autoagent autoagent-worker trend-radar synapse
+	$(COMPOSE) up -d autoagent autoagent-worker autoagent-beat trend-radar synapse
 
 up-obs:
 	$(COMPOSE) up -d caddy prometheus grafana loki promtail
@@ -39,8 +39,8 @@ pull:
 
 # One-command deploy: pull latest code, rebuild app images, restart services.
 update: pull
-	$(COMPOSE) build autoagent autoagent-worker
-	$(COMPOSE) up -d autoagent autoagent-worker
+	$(COMPOSE) build autoagent autoagent-worker autoagent-beat
+	$(COMPOSE) up -d autoagent autoagent-worker autoagent-beat
 	@echo "Waiting 20s for healthchecks..."
 	@sleep 20
 	$(COMPOSE) ps

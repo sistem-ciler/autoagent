@@ -63,6 +63,8 @@ ops.{$DOMAIN} {
     reverse_proxy /health autoagent:8080
     reverse_proxy /tasks autoagent:8080
     reverse_proxy /tasks/* autoagent:8080
+    reverse_proxy /schedules autoagent:8080
+    reverse_proxy /schedules/* autoagent:8080
     reverse_proxy /grafana/* grafana:3000
     reverse_proxy /prometheus/* prometheus:9090
     root * /srv/landing

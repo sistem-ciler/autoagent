@@ -1,5 +1,5 @@
-# SRV-HTZNR-EU-SWS  ·  single-host production stack  ·  rev.14  ·  2026-05-10
-# Services:  autoagent · trend-radar · synapse
+# SRV-HTZNR-EU-SWS  ·  single-host production stack  ·  rev.15  ·  2026-05-10
+# Services:  autoagent · autoagent-worker · autoagent-beat · trend-radar · synapse
 # Infra:     postgres 16 · redis 7 · minio · caddy 2 · prometheus · grafana · loki
 # Host:      Hetzner CCX52 · Debian 12 · Docker · Falkenstein EU
 #
@@ -22,6 +22,9 @@
 #
 # NOTE on build context (rev.14): changed from absolute /srv/godoman/autoagent
 # to relative . so builds work correctly from any environment.
+#
+# NOTE on beat (rev.15): added autoagent-beat for Celery Beat scheduling.
+# Fires tick_schedules every 60s to run due schedule entries.
 
 networks:
   internal:
@@ -129,6 +132,22 @@ services:
     image: godoman/autoagent:local
     restart: unless-stopped
     command: ["celery", "-A", "app.workers.celery_app", "worker", "--loglevel=info", "--concurrency=1"]
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-ops}:${POSTGRES_PASSWORD}@postgres:5432/autoagent
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis: {condition: service_healthy}
+    networks: [internal]
+
+  autoagent-beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: godoman/autoagent:local
+    restart: unless-stopped
+    command: ["celery", "-A", "app.workers.celery_app", "beat", "--loglevel=info", "-s", "/tmp/celerybeat-schedule"]
     env_file: .env
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-ops}:${POSTGRES_PASSWORD}@postgres:5432/autoagent

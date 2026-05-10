@@ -6,6 +6,7 @@ from fastapi.responses import PlainTextResponse
 
 from app.db import init_db
 from app.api import tasks as tasks_router
+from app.api import schedules as schedules_router
 
 _START = time.time()
 
@@ -18,6 +19,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="autoagent", version="0.1.0", lifespan=lifespan)
 app.include_router(tasks_router.router, prefix="/tasks")
+app.include_router(schedules_router.router, prefix="/schedules")
 
 
 @app.get("/health")
