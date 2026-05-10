@@ -1,0 +1,66 @@
+{
+  "title": "SRV-HTZNR-EU-SWS — Stack Overview",
+  "uid": "srv-htznr-overview",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-1h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "autoagent up",
+      "gridPos": { "x": 0, "y": 0, "w": 3, "h": 3 },
+      "targets": [{ "expr": "up{job=\"autoagent\"}", "legendFormat": "" }],
+      "options": { "colorMode": "background", "graphMode": "none" },
+      "fieldConfig": { "defaults": { "mappings": [{ "type": "value", "options": { "0": { "text": "DOWN", "color": "red" }, "1": { "text": "UP", "color": "green" } } }] } }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "cua up",
+      "gridPos": { "x": 3, "y": 0, "w": 3, "h": 3 },
+      "targets": [{ "expr": "up{job=\"cua\"}", "legendFormat": "" }],
+      "options": { "colorMode": "background", "graphMode": "none" },
+      "fieldConfig": { "defaults": { "mappings": [{ "type": "value", "options": { "0": { "text": "DOWN", "color": "red" }, "1": { "text": "UP", "color": "green" } } }] } }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "trend-radar up",
+      "gridPos": { "x": 6, "y": 0, "w": 3, "h": 3 },
+      "targets": [{ "expr": "trend_radar_up", "legendFormat": "" }],
+      "options": { "colorMode": "background", "graphMode": "none" },
+      "fieldConfig": { "defaults": { "mappings": [{ "type": "value", "options": { "0": { "text": "DOWN", "color": "red" }, "1": { "text": "UP", "color": "green" } } }] } }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "synapse up",
+      "gridPos": { "x": 9, "y": 0, "w": 3, "h": 3 },
+      "targets": [{ "expr": "up{job=\"synapse\"}", "legendFormat": "" }],
+      "options": { "colorMode": "background", "graphMode": "none" },
+      "fieldConfig": { "defaults": { "mappings": [{ "type": "value", "options": { "0": { "text": "DOWN", "color": "red" }, "1": { "text": "UP", "color": "green" } } }] } }
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "trend-radar — Memory (RSS)",
+      "gridPos": { "x": 0, "y": 3, "w": 12, "h": 6 },
+      "targets": [
+        { "expr": "nodejs_memory_rss_bytes", "legendFormat": "RSS" },
+        { "expr": "nodejs_memory_heap_used_bytes", "legendFormat": "Heap used" },
+        { "expr": "nodejs_memory_heap_total_bytes", "legendFormat": "Heap total" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "bytes" } }
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "All services — scrape duration",
+      "gridPos": { "x": 12, "y": 3, "w": 12, "h": 6 },
+      "targets": [{ "expr": "scrape_duration_seconds", "legendFormat": "{{job}}" }],
+      "fieldConfig": { "defaults": { "unit": "s" } }
+    }
+  ]
+}

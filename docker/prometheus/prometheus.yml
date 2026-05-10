@@ -1,0 +1,38 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    datacenter: falkenstein
+    env: production
+
+scrape_configs:
+
+  - job_name: autoagent
+    static_configs:
+      - targets: [autoagent:8080]
+    metrics_path: /metrics
+
+  - job_name: cua
+    static_configs:
+      - targets: [cua:8443]
+    metrics_path: /metrics
+    scheme: http
+
+  - job_name: trend-radar
+    static_configs:
+      - targets: [trend-radar:3000]
+    metrics_path: /api/metrics
+
+  - job_name: synapse
+    static_configs:
+      - targets: [synapse:9093]
+    metrics_path: /_synapse/metrics
+
+  - job_name: caddy
+    static_configs:
+      - targets: [caddy:2019]
+    metrics_path: /metrics
+
+  - job_name: prometheus
+    static_configs:
+      - targets: [localhost:9090]

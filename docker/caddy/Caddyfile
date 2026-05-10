@@ -1,0 +1,72 @@
+# SRV-HTZNR-EU-SWS — Caddy 2 · auto-TLS · HTTP/3 · TLS 1.3 only
+# Cloudflare (DNS+WAF) → Caddy (auto-TLS) → upstream services
+# Synapse federation on :8448 bypasses Cloudflare per matrix spec.
+
+{
+    email {$ACME_EMAIL}
+    servers {
+        protocols h1 h2 h3
+    }
+}
+
+(security_headers) {
+    header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+    header X-Content-Type-Options     nosniff
+    header X-Frame-Options            DENY
+    header Referrer-Policy            strict-origin-when-cross-origin
+    header Permissions-Policy         "geolocation=(), camera=(), microphone=()"
+}
+
+# autoagent — AI agent API
+api.{$DOMAIN} {
+    import security_headers
+    reverse_proxy autoagent:8080
+}
+
+# trend-radar + x-studio — content pipeline UI
+radar.{$DOMAIN} {
+    import security_headers
+    reverse_proxy trend-radar:3000
+}
+
+# synapse — Matrix client API
+matrix.{$DOMAIN} {
+    import security_headers
+    reverse_proxy synapse:8008
+}
+
+# Well-known delegation for Matrix federation
+{$DOMAIN} {
+    import security_headers
+    respond /.well-known/matrix/server `{"m.server":"matrix.{$DOMAIN}:443"}` 200 {
+        close
+    }
+}
+
+# Grafana observability (ops subdomain, internal access only)
+ops.{$DOMAIN} {
+    import security_headers
+    reverse_proxy /grafana/* grafana:3000
+    reverse_proxy /prometheus/* prometheus:9090
+}
+
+# ─────────────────────────────────────────────────────────────────────
+# Pre-DNS demo access (IP-based, plain HTTP)
+# Catches any request on :80 that doesn't match a named host above.
+# Serves the landing page + admin UI + path-mounted access to API
+# docs / Grafana / Prometheus. Remove or restrict once DNS is live.
+# ─────────────────────────────────────────────────────────────────────
+:80 {
+    reverse_proxy /docs autoagent:8080
+    reverse_proxy /redoc autoagent:8080
+    reverse_proxy /openapi.json autoagent:8080
+    reverse_proxy /health autoagent:8080
+    reverse_proxy /tasks autoagent:8080
+    reverse_proxy /tasks/* autoagent:8080
+    reverse_proxy /schedules autoagent:8080
+    reverse_proxy /schedules/* autoagent:8080
+    reverse_proxy /grafana/* grafana:3000
+    reverse_proxy /prometheus/* prometheus:9090
+    root * /srv/landing
+    file_server
+}

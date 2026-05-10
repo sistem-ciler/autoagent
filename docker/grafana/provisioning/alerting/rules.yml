@@ -1,0 +1,87 @@
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: godoman-infra
+    folder: Alerts
+    interval: 1m
+    rules:
+      - uid: up-check-autoagent
+        title: Autoagent Down
+        condition: C
+        data:
+          - refId: A
+            datasourceUid: prometheus
+            model:
+              expr: up{job="autoagent"}
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params: [1]
+                    type: lt
+                  operator:
+                    type: and
+                  query:
+                    params: [A]
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              refId: C
+              type: threshold
+        noDataState: Alerting
+        execErrState: Alerting
+        for: 2m
+        annotations:
+          summary: "Autoagent service is down on {{ $labels.instance }}"
+        labels:
+          severity: critical
+
+      - uid: up-check-postgres
+        title: Postgres Down
+        condition: C
+        data:
+          - refId: A
+            datasourceUid: prometheus
+            model:
+              expr: up{job="postgres"}
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params: [1]
+                    type: lt
+                  operator:
+                    type: and
+                  query:
+                    params: [A]
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              refId: C
+              type: threshold
+        noDataState: Alerting
+        execErrState: Alerting
+        for: 2m
+        annotations:
+          summary: "Postgres is down on {{ $labels.instance }}"
+        labels:
+          severity: critical

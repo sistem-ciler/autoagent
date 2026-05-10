@@ -1,0 +1,291 @@
+# SRV-HTZNR-EU-SWS  ·  single-host production stack  ·  rev.15  ·  2026-05-10
+# Services:  autoagent · autoagent-worker · autoagent-beat · trend-radar · synapse
+# Infra:     postgres 16 · redis 7 · minio · caddy 2 · prometheus · grafana · loki
+# Host:      Hetzner CCX52 · Debian 12 · Docker · Falkenstein EU
+#
+# NOTE on cua: dropped from rev.07. The upstream cua container expects
+# a macOS host running the lume daemon (Apple Virtualization Framework)
+# and its Dockerfile references scripts/build.sh which doesn't exist
+# in the current source. Sandbox execution on Linux will be reintroduced
+# via ruflo (Docker-in-Docker) or Firecracker/libvirt as a follow-up.
+#
+# NOTE on networks (rev.08): removed `internal: true` flag. That flag
+# blocks ALL outbound traffic for every container on the network, which
+# breaks ACME (caddy → Let's Encrypt), Anthropic API calls (autoagent),
+# RSS fetches (trend-radar), and Matrix federation (synapse). The plain
+# bridge keeps services from being directly reachable from outside without
+# published ports — that is the actual isolation we want.
+#
+# NOTE on landing (rev.13): caddy now mounts ./docker/landing as /srv/landing
+# to serve a static landing page on bare-IP HTTP (the :80 fallback site
+# block in Caddyfile). Used pre-DNS for customer demos.
+#
+# NOTE on build context (rev.14): changed from absolute /srv/godoman/autoagent
+# to relative . so builds work correctly from any environment.
+#
+# NOTE on beat (rev.15): added autoagent-beat for Celery Beat scheduling.
+# Fires tick_schedules every 60s to run due schedule entries.
+
+networks:
+  internal:
+    driver: bridge
+  edge:
+    driver: bridge
+
+volumes:
+  pg_data:
+  redis_data:
+  minio_data:
+  synapse_data:
+  prometheus_data:
+  grafana_data:
+  loki_data:
+  caddy_data:
+  caddy_config:
+
+services:
+
+  # ── Shared Infrastructure ──────────────────────────────────────────────
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-ops}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: postgres
+      AUTOAGENT_DB_PASSWORD: ${AUTOAGENT_DB_PASSWORD}
+      TREND_RADAR_DB_PASSWORD: ${TREND_RADAR_DB_PASSWORD}
+      SYNAPSE_DB_PASSWORD: ${SYNAPSE_DB_PASSWORD}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sh:/docker-entrypoint-initdb.d/init.sh:ro
+    networks: [internal]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ops}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: >
+      redis-server
+      --appendonly yes
+      --loglevel warning
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    networks: [internal]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  minio:
+    image: quay.io/minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minio}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    volumes:
+      - minio_data:/data
+    networks: [internal]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ── Application Services ───────────────────────────────────────────
+
+  autoagent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: godoman/autoagent:local
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-ops}:${POSTGRES_PASSWORD}@postgres:5432/autoagent
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis: {condition: service_healthy}
+    networks: [internal]
+    expose: ["8080"]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  autoagent-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: godoman/autoagent:local
+    restart: unless-stopped
+    command: ["celery", "-A", "app.workers.celery_app", "worker", "--loglevel=info", "--concurrency=1"]
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-ops}:${POSTGRES_PASSWORD}@postgres:5432/autoagent
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis: {condition: service_healthy}
+    networks: [internal]
+
+  autoagent-beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: godoman/autoagent:local
+    restart: unless-stopped
+    command: ["celery", "-A", "app.workers.celery_app", "beat", "--loglevel=info", "-s", "/tmp/celerybeat-schedule"]
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-ops}:${POSTGRES_PASSWORD}@postgres:5432/autoagent
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis: {condition: service_healthy}
+    networks: [internal]
+
+  trend-radar:
+    build:
+      context: /srv/godoman/trend-radar
+      dockerfile: Dockerfile
+    image: godoman/trend-radar:local
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-ops}:${POSTGRES_PASSWORD}@postgres:5432/trend_radar
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minio}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+    depends_on:
+      postgres: {condition: service_healthy}
+    networks: [internal, edge]
+    expose: ["3000"]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/api/health >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  synapse:
+    image: ghcr.io/element-hq/synapse:latest
+    restart: unless-stopped
+    environment:
+      SYNAPSE_CONFIG_PATH: /data/homeserver.yaml
+      SYNAPSE_SERVER_NAME: "matrix.${DOMAIN}"
+      SYNAPSE_DB_PASSWORD: "${SYNAPSE_DB_PASSWORD}"
+      SYNAPSE_REGISTRATION_SECRET: "${SYNAPSE_REGISTRATION_SECRET}"
+    volumes:
+      - synapse_data:/data
+      - ./docker/synapse/homeserver.yaml:/template/homeserver.yaml:ro
+      # stdout-only log config: avoids auto-generated /homeserver.log which
+      # UID 991 (synapse user) cannot write
+      - ./docker/synapse/log.config:/tmp/log.config:ro
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >
+        chown -R 991:991 /data
+        && sed
+        -e "s|__SYNAPSE_SERVER_NAME__|$$SYNAPSE_SERVER_NAME|g"
+        -e "s|__SYNAPSE_DB_PASSWORD__|$$SYNAPSE_DB_PASSWORD|g"
+        -e "s|__SYNAPSE_REGISTRATION_SECRET__|$$SYNAPSE_REGISTRATION_SECRET|g"
+        /template/homeserver.yaml > /data/homeserver.yaml
+        && chown 991:991 /data/homeserver.yaml
+        && exec /start.py
+    depends_on:
+      postgres: {condition: service_healthy}
+    networks: [internal, edge]
+    expose: ["8008", "9093"]
+    ports:
+      - "8448:8448"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8008/_matrix/client/versions || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # ── Edge / Reverse Proxy ───────────────────────────────────────────
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    # env_file exposes DOMAIN and ACME_EMAIL to Caddyfile {$VAR} substitution
+    env_file: .env
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./docker/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./docker/landing:/srv/landing:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: [autoagent, trend-radar, synapse]
+    networks: [internal, edge]
+
+  # ── Observability Stack ───────────────────────────────────────────
+
+  prometheus:
+    image: prom/prometheus:latest
+    restart: unless-stopped
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=30d"
+      - "--web.enable-lifecycle"
+    volumes:
+      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    networks: [internal]
+    expose: ["9090"]
+
+  grafana:
+    image: grafana/grafana:latest
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_SERVER_ROOT_URL: "%(protocol)s://%(domain)s/grafana/"
+      GF_SERVER_SERVE_FROM_SUB_PATH: "true"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on: [prometheus, loki]
+    networks: [internal]
+    expose: ["3000"]
+
+  loki:
+    image: grafana/loki:latest
+    restart: unless-stopped
+    command: -config.file=/etc/loki/loki-config.yml
+    volumes:
+      - ./docker/loki/loki-config.yml:/etc/loki/loki-config.yml:ro
+      - loki_data:/loki
+    networks: [internal]
+    expose: ["3100"]
+
+  promtail:
+    image: grafana/promtail:latest
+    restart: unless-stopped
+    command: -config.file=/etc/promtail/promtail-config.yml
+    volumes:
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./docker/promtail/promtail-config.yml:/etc/promtail/promtail-config.yml:ro
+    depends_on: [loki]
+    networks: [internal]
+    user: root

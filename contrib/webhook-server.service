@@ -1,0 +1,15 @@
+[Unit]
+Description=Godoman Webhook Deploy Server
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/srv/godoman/autoagent
+ExecStart=/usr/bin/python3 /srv/godoman/autoagent/scripts/webhook-server.py
+Restart=on-failure
+RestartSec=5
+EnvironmentFile=/srv/godoman/autoagent/.env
+
+[Install]
+WantedBy=multi-user.target

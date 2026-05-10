@@ -1,0 +1,70 @@
+# Synapse production homeserver config — SRV-HTZNR-EU-SWS
+# TLS terminated by Caddy; Synapse listens plain HTTP internally.
+# Placeholders below are substituted at container start by the synapse
+# service's entrypoint (sed against env vars). Do not hand-edit values
+# in this file — change the corresponding env var in .env instead.
+
+server_name: "__SYNAPSE_SERVER_NAME__"
+public_baseurl: "https://__SYNAPSE_SERVER_NAME__"
+pid_file: /data/homeserver.pid
+
+listeners:
+  - port: 8008
+    tls: false
+    type: http
+    x_forwarded: true
+    bind_addresses: ['0.0.0.0']
+    resources:
+      - names: [client, federation]
+        compress: false
+  - port: 9093
+    type: metrics
+    bind_addresses: ['0.0.0.0']
+
+database:
+  name: psycopg2
+  args:
+    user: synapse_user
+    password: "__SYNAPSE_DB_PASSWORD__"
+    database: synapse
+    host: postgres
+    port: 5432
+    cp_min: 5
+    cp_max: 10
+
+media_store_path: /data/media_store
+uploads_path: /data/uploads
+
+enable_registration: false
+registration_shared_secret: "__SYNAPSE_REGISTRATION_SECRET__"
+
+report_stats: false
+
+signing_key_path: "/data/matrix.signing.key"
+trusted_key_servers:
+  - server_name: "matrix.org"
+
+# log.config is bind-mounted from docker/synapse/log.config (stdout only)
+log_config: "/tmp/log.config"
+
+no_tls: true
+
+enable_metrics: true
+
+# E2EE defaults
+encryption_enabled_by_default_for_room_type: all
+
+# Rate limiting
+rc_messages_per_second: 0.2
+rc_message_burst_count: 10
+
+# Media
+max_upload_size: 50M
+max_image_pixels: 32M
+
+# Retention
+retention:
+  enabled: true
+  default_policy:
+    min_lifetime: 1d
+    max_lifetime: 1y

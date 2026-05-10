@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>godoman · admin</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#0a0e1a; --fg:#e8ecf4; --muted:#8892a8;
+    --accent:#7c5cff; --accent-glow:rgba(124,92,255,.18);
+    --card:#121829; --border:rgba(255,255,255,.08);
+    --ok:#3ddc84; --warn:#ffb84a; --err:#ff5577; --info:#5cb8ff;
+  }
+  html,body{height:100%}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,system-ui,sans-serif;
+    background:var(--bg); color:var(--fg);
+    line-height:1.5; font-size:14px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1400px;margin:0 auto;padding:32px 24px}
+  header{display:flex;align-items:center;justify-content:space-between;margin-bottom:32px;flex-wrap:wrap;gap:12px}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:18px;letter-spacing:-.02em}
+  .brand-dot{width:9px;height:9px;border-radius:50%;background:var(--accent);box-shadow:0 0 12px var(--accent)}
+  .nav{display:flex;gap:18px;font-size:13px}
+  .nav a{color:var(--muted);text-decoration:none;transition:color .15s}
+  .nav a:hover{color:var(--fg)}
+  .nav a.active{color:var(--accent)}
+
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px;margin-bottom:24px}
+  .stat{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px}
+  .stat-label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:6px}
+  .stat-value{font-size:22px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+  .accent{color:var(--accent)} .ok{color:var(--ok)} .err{color:var(--err)} .info{color:var(--info)} .warn{color:var(--warn)}
+
+  .tab-bar{display:flex;gap:2px;margin-bottom:20px;border-bottom:1px solid var(--border)}
+  .tab-btn{
+    background:transparent;border:none;color:var(--muted);
+    font:inherit;font-size:13px;font-weight:600;
+    padding:10px 20px;cursor:pointer;
+    border-bottom:2px solid transparent;margin-bottom:-1px;
+    text-transform:uppercase;letter-spacing:.06em;transition:all .15s;
+  }
+  .tab-btn:hover{color:var(--fg)}
+  .tab-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
+
+  .compose,.sched-form{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:20px}
+  .panel-title{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px;font-weight:600}
+  .panel-hint{font-size:12px;color:var(--muted);margin-bottom:12px}
+  .panel-hint span{color:var(--accent)}
+  .compose-row{display:flex;gap:10px;flex-wrap:wrap}
+  textarea{
+    flex:1; min-width:260px; min-height:80px;
+    background:var(--bg); color:var(--fg);
+    border:1px solid var(--border); border-radius:8px; padding:12px;
+    font:inherit; font-size:14px; resize:vertical;
+  }
+  textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
+  .compose-side{display:flex;flex-direction:column;gap:8px;min-width:175px}
+  select,input[type="text"]{
+    background:var(--bg); color:var(--fg);
+    border:1px solid var(--border); border-radius:8px;
+    padding:10px 12px; font:inherit; font-size:13px; width:100%;
+  }
+  select:focus,input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
+  button{
+    background:var(--accent); color:#fff;
+    border:none; border-radius:8px;
+    padding:10px 16px; font:inherit; font-size:14px; font-weight:600;
+    cursor:pointer; transition:all .15s;
+  }
+  button:hover:not(:disabled){background:#6a4cf0;transform:translateY(-1px)}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  button.secondary{background:transparent;border:1px solid var(--border);color:var(--fg)}
+  button.secondary:hover:not(:disabled){border-color:var(--accent);transform:translateY(-1px)}
+  button.danger{background:rgba(255,85,119,.12);border:1px solid rgba(255,85,119,.25);color:var(--err)}
+  button.danger:hover:not(:disabled){background:rgba(255,85,119,.22);transform:translateY(-1px)}
+  button.sm{padding:5px 10px;font-size:12px;border-radius:6px}
+
+  .table-card{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:20px}
+  .toolbar{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid var(--border);gap:12px;flex-wrap:wrap}
+  .toolbar h2{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+  .filters{display:flex;gap:8px;flex-wrap:wrap}
+  .chip{
+    padding:5px 12px; border-radius:20px;
+    background:transparent; border:1px solid var(--border);
+    color:var(--muted); font-size:12px; cursor:pointer; transition:all .15s;
+  }
+  .chip:hover{color:var(--fg)}
+  .chip.active{background:var(--accent);border-color:var(--accent);color:#fff}
+  table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+  th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600;padding:12px 18px;background:rgba(255,255,255,.02)}
+  td{padding:13px 18px;border-top:1px solid var(--border);vertical-align:top}
+  tr.task-row{cursor:pointer;transition:background .1s}
+  tr.task-row:hover{background:rgba(124,92,255,.04)}
+  tr.sched-row td{vertical-align:middle}
+  .id-cell{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;color:var(--muted)}
+  .instr-cell{max-width:420px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+  .badge::before{content:"";width:6px;height:6px;border-radius:50%}
+  .b-pending{background:rgba(255,184,74,.12);color:var(--warn)}.b-pending::before{background:var(--warn)}
+  .b-running{background:rgba(92,184,255,.12);color:var(--info)}.b-running::before{background:var(--info);animation:pulse 1.5s ease-in-out infinite}
+  .b-done{background:rgba(61,220,132,.12);color:var(--ok)}.b-done::before{background:var(--ok)}
+  .b-failed{background:rgba(255,85,119,.12);color:var(--err)}.b-failed::before{background:var(--err)}
+  .b-active{background:rgba(61,220,132,.12);color:var(--ok)}.b-active::before{background:var(--ok)}
+  .b-paused{background:rgba(255,255,255,.06);color:var(--muted)}.b-paused::before{background:var(--muted)}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+  .num{color:var(--muted);font-size:13px}
+  .empty{padding:60px 20px;text-align:center;color:var(--muted)}
+
+  .detail-row{background:rgba(255,255,255,.015)}
+  .detail-wrap{padding:18px}
+  .detail-meta{font-size:11px;color:var(--muted);margin-bottom:12px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;line-height:1.8}
+  .steps-toggle{
+    background:none;border:none;padding:0;color:var(--muted);font:inherit;
+    font-size:11px;cursor:pointer;text-decoration:underline;margin-bottom:8px;
+    display:block;
+  }
+  .steps-toggle:hover{color:var(--fg);transform:none;background:none}
+  .steps-log{
+    background:var(--bg);border:1px solid var(--border);border-radius:8px;
+    padding:12px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+    font-size:11px;line-height:1.6;white-space:pre-wrap;color:var(--muted);
+    max-height:220px;overflow:auto;margin-bottom:12px;
+  }
+  .result-error{
+    background:rgba(255,85,119,.06);border:1px solid rgba(255,85,119,.2);
+    border-radius:8px;padding:12px;
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;
+    color:var(--err);white-space:pre-wrap;
+  }
+  .md-body{font-size:14px;line-height:1.75}
+  .md-body h1,.md-body h2,.md-body h3,.md-body h4{color:var(--fg);margin:1.1em 0 .4em;font-weight:600}
+  .md-body h1{font-size:1.25em}.md-body h2{font-size:1.12em}.md-body h3{font-size:1.02em}
+  .md-body p{margin:.5em 0}
+  .md-body ul,.md-body ol{padding-left:1.5em;margin:.5em 0}
+  .md-body li{margin:.2em 0}
+  .md-body table{border-collapse:collapse;width:100%;margin:.8em 0}
+  .md-body th,.md-body td{border:1px solid var(--border);padding:7px 13px;text-align:left}
+  .md-body th{background:rgba(255,255,255,.04);font-weight:600;font-size:12px}
+  .md-body td{font-size:13px}
+  .md-body code{background:rgba(255,255,255,.06);border:1px solid var(--border);padding:1px 5px;border-radius:4px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.88em}
+  .md-body pre{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;overflow-x:auto;margin:.7em 0}
+  .md-body pre code{background:none;border:none;padding:0}
+  .md-body a{color:var(--accent)}.md-body a:hover{text-decoration:underline}
+  .md-body blockquote{border-left:3px solid var(--accent);padding-left:1em;color:var(--muted);margin:.4em 0}
+  .md-body strong{font-weight:600;color:var(--fg)}
+  .md-body hr{border:none;border-top:1px solid var(--border);margin:.8em 0}
+
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .form-grid .span2{grid-column:span 2}
+  .form-group{display:flex;flex-direction:column;gap:4px}
+  .form-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+  .form-group textarea{min-height:90px;flex:unset}
+  .actions-cell{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+
+  .pulse{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 8px var(--ok);animation:pulse 1.5s ease-in-out infinite}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="brand"><span class="brand-dot"></span>godoman · admin</div>
+  <nav class="nav">
+    <a href="/">home</a>
+    <a href="/admin.html" class="active">admin</a>
+    <a href="/docs">api</a>
+    <a href="/grafana/login">grafana</a>
+    <span style="color:var(--muted)"><span class="pulse"></span> live</span>
+  </nav>
+</header>
+
+<section class="stats">
+  <div class="stat"><div class="stat-label">Total tasks</div><div class="stat-value" id="s-total">—</div></div>
+  <div class="stat"><div class="stat-label">Running</div><div class="stat-value info" id="s-running">—</div></div>
+  <div class="stat"><div class="stat-label">Done</div><div class="stat-value ok" id="s-done">—</div></div>
+  <div class="stat"><div class="stat-label">Failed</div><div class="stat-value err" id="s-failed">—</div></div>
+  <div class="stat"><div class="stat-label">Schedules</div><div class="stat-value warn" id="s-schedules">—</div></div>
+  <div class="stat"><div class="stat-label">Est. spend</div><div class="stat-value accent" id="s-cost">—</div></div>
+</section>
+
+<div class="tab-bar">
+  <button class="tab-btn active" data-tab="tasks">Tasks</button>
+  <button class="tab-btn" data-tab="schedules">Schedules</button>
+</div>
+
+<!-- Tasks tab -->
+<div id="tab-tasks">
+
+  <section class="compose">
+    <h2 class="panel-title">Dispatch task</h2>
+    <p class="panel-hint">Agents <span>search the web in real time</span> — competitors, pricing, trends, market data.</p>
+    <form id="compose-form" class="compose-row">
+      <textarea id="c-instr" placeholder='e.g. "Find the top 5 competitors of Notion, visit their pricing pages, and write a comparison table with monthly costs and key features."' required></textarea>
+      <div class="compose-side">
+        <select id="c-model">
+          <option value="claude-opus-4-7" selected>Opus 4.7 — best</option>
+          <option value="claude-sonnet-4-6">Sonnet 4.6 — fast</option>
+          <option value="claude-haiku-4-5">Haiku 4.5 — cheap</option>
+        </select>
+        <button type="submit" id="c-submit">Dispatch →</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="table-card">
+    <div class="toolbar">
+      <h2>Recent tasks</h2>
+      <div class="filters" id="filters">
+        <button class="chip active" data-status="">all</button>
+        <button class="chip" data-status="running">running</button>
+        <button class="chip" data-status="pending">pending</button>
+        <button class="chip" data-status="done">done</button>
+        <button class="chip" data-status="failed">failed</button>
+      </div>
+    </div>
+    <table>
+      <thead><tr>
+        <th>id</th><th>status</th><th>instruction</th><th>cost</th><th>duration</th><th>created</th>
+      </tr></thead>
+      <tbody id="tasks-body"><tr><td colspan="6" class="empty">Loading…</td></tr></tbody>
+    </table>
+  </section>
+
+</div>
+
+<!-- Schedules tab -->
+<div id="tab-schedules" style="display:none">
+
+  <section class="sched-form">
+    <h2 class="panel-title">New schedule</h2>
+    <p class="panel-hint">Agents run automatically on your chosen interval — <span>set it and forget it</span>.</p>
+    <form id="sched-create-form">
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label" for="sf-name">Name</label>
+          <input type="text" id="sf-name" placeholder="Daily competitor scan" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="sf-model">Model</label>
+          <select id="sf-model">
+            <option value="claude-opus-4-7" selected>Opus 4.7 — best</option>
+            <option value="claude-sonnet-4-6">Sonnet 4.6 — fast</option>
+            <option value="claude-haiku-4-5">Haiku 4.5 — cheap</option>
+          </select>
+        </div>
+        <div class="form-group span2">
+          <label class="form-label" for="sf-instr">Instruction</label>
+          <textarea id="sf-instr" placeholder="What should this agent research and report on each run?" required></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="sf-interval">Run every</label>
+          <select id="sf-interval">
+            <option value="30">30 minutes</option>
+            <option value="60">1 hour</option>
+            <option value="180">3 hours</option>
+            <option value="360">6 hours</option>
+            <option value="720">12 hours</option>
+            <option value="1440" selected>Daily (24 h)</option>
+            <option value="4320">Every 3 days</option>
+            <option value="10080">Weekly</option>
+          </select>
+        </div>
+        <div class="form-group" style="justify-content:flex-end">
+          <button type="submit" id="sf-submit" style="margin-top:auto">Create schedule →</button>
+        </div>
+      </div>
+    </form>
+  </section>
+
+  <section class="table-card">
+    <div class="toolbar"><h2>Schedules</h2></div>
+    <table>
+      <thead><tr>
+        <th>name</th><th>model</th><th>every</th><th>status</th><th>next run</th><th>runs</th><th>actions</th>
+      </tr></thead>
+      <tbody id="schedules-body"><tr><td colspan="7" class="empty">Loading…</td></tr></tbody>
+    </table>
+  </section>
+
+</div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/marked@11/marked.min.js"></script>
+<script>
+const API = "";
+let currentStatus = "";
+let openId = null;
+let schedulesData = [];
+
+marked.use({ gfm: true, breaks: true });
+
+const fmt = {
+  int: n => (n ?? 0).toLocaleString(),
+  ago: iso => {
+    const s = (Date.now() - new Date(iso).getTime()) / 1000;
+    if (s < 60) return Math.floor(s) + "s ago";
+    if (s < 3600) return Math.floor(s/60) + "m ago";
+    if (s < 86400) return Math.floor(s/3600) + "h ago";
+    return Math.floor(s/86400) + "d ago";
+  },
+  until: iso => {
+    const s = (new Date(iso).getTime() - Date.now()) / 1000;
+    if (s <= 0) return "overdue";
+    if (s < 60) return "< 1m";
+    if (s < 3600) return Math.floor(s/60) + "m";
+    if (s < 86400) return Math.floor(s/3600) + "h " + Math.floor((s%3600)/60) + "m";
+    return Math.floor(s/86400) + "d";
+  },
+  ms: n => n == null ? "—" : (n < 1000 ? n + "ms" : (n/1000).toFixed(1) + "s"),
+  cost: (inp, out) => {
+    const usd = ((inp||0)/1e6)*5 + ((out||0)/1e6)*25;
+    return "$" + usd.toFixed(usd < 0.01 ? 4 : 2);
+  },
+  interval: m => {
+    if (m < 60) return m + "m";
+    if (m < 1440) return (m/60) + "h";
+    if (m < 10080) return (m/1440) + "d";
+    return (m/10080) + "w";
+  },
+  esc: s => (s ?? "").replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])),
+};
+
+async function loadStats() {
+  try {
+    const [tr, sr] = await Promise.all([
+      fetch(`${API}/tasks?limit=1`).then(r => r.json()),
+      fetch(`${API}/schedules`).then(r => r.json()),
+    ]);
+    document.getElementById("s-total").textContent = fmt.int(tr.total);
+    document.getElementById("s-running").textContent = fmt.int(tr.by_status.running ?? 0);
+    document.getElementById("s-done").textContent = fmt.int(tr.by_status.done ?? 0);
+    document.getElementById("s-failed").textContent = fmt.int(tr.by_status.failed ?? 0);
+    const active = sr.filter(s => s.enabled).length;
+    document.getElementById("s-schedules").textContent = active + " / " + sr.length;
+    document.getElementById("s-cost").textContent = fmt.cost(tr.total_input_tokens, tr.total_output_tokens);
+  } catch(_) {}
+}
+
+async function loadTasks() {
+  const url = `${API}/tasks?limit=100${currentStatus ? "&status=" + currentStatus : ""}`;
+  let data;
+  try {
+    const r = await fetch(url);
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    data = await r.json();
+  } catch (e) {
+    document.getElementById("tasks-body").innerHTML =
+      `<tr><td colspan="6" class="empty">Failed to load: ${fmt.esc(e.message)}</td></tr>`;
+    return;
+  }
+
+  const body = document.getElementById("tasks-body");
+  if (data.tasks.length === 0) {
+    body.innerHTML = `<tr><td colspan="6" class="empty">No tasks yet — dispatch an instruction above.</td></tr>`;
+    return;
+  }
+
+  body.innerHTML = data.tasks.map(t => {
+    const expanded = t.id === openId;
+    let detail = "";
+    if (expanded) {
+      const meta = `model: ${fmt.esc(t.model)} &nbsp;·&nbsp; in: ${fmt.int(t.input_tokens)} &nbsp;·&nbsp; out: ${fmt.int(t.output_tokens)} &nbsp;·&nbsp; cache: ${fmt.int(t.cache_read_tokens)} &nbsp;·&nbsp; ${fmt.ms(t.duration_ms)} &nbsp;·&nbsp; cost: ${fmt.cost(t.input_tokens, t.output_tokens)}`;
+      let content;
+      if (t.error) {
+        content = `<div class="result-error">${fmt.esc(t.error)}</div>`;
+      } else if (t.status === "running") {
+        content = `<div style="color:var(--muted);font-size:13px">Agent is working… results will appear here automatically.</div>`;
+      } else {
+        const raw = t.result || "";
+        const parts = raw.split("\n\n---\n\n");
+        let stepsHtml = "";
+        let answer = raw;
+        if (parts.length > 1 && parts[0].startsWith("[Step ")) {
+          answer = parts[parts.length - 1];
+          const stepsText = parts.slice(0, -1).join("\n\n---\n\n");
+          const count = parts.length - 1;
+          stepsHtml = `<button class="steps-toggle" onclick="var l=this.nextElementSibling;l.style.display=l.style.display==='none'?'block':'none'">▶ Show ${count} research step${count>1?"s":""}</button><div class="steps-log" style="display:none">${fmt.esc(stepsText)}</div>`;
+        }
+        content = stepsHtml + `<div class="md-body">${marked.parse(answer)}</div>`;
+      }
+      detail = `<tr class="detail-row"><td colspan="6"><div class="detail-wrap"><div class="detail-meta">${meta}</div>${content}</div></td></tr>`;
+    }
+    return `<tr class="task-row" data-id="${t.id}">
+      <td class="id-cell">${t.id.slice(0,8)}</td>
+      <td><span class="badge b-${t.status}">${t.status}</span></td>
+      <td class="instr-cell" title="${fmt.esc(t.instruction)}">${fmt.esc(t.instruction)}</td>
+      <td class="num">${fmt.cost(t.input_tokens, t.output_tokens)}</td>
+      <td class="num">${fmt.ms(t.duration_ms)}</td>
+      <td class="num">${fmt.ago(t.created_at)}</td>
+    </tr>${detail}`;
+  }).join("");
+
+  body.querySelectorAll("tr.task-row").forEach(row => {
+    row.addEventListener("click", () => {
+      openId = openId === row.dataset.id ? null : row.dataset.id;
+      loadTasks();
+    });
+  });
+}
+
+document.getElementById("filters").addEventListener("click", e => {
+  if (e.target.tagName !== "BUTTON") return;
+  document.querySelectorAll("#filters .chip").forEach(c => c.classList.remove("active"));
+  e.target.classList.add("active");
+  currentStatus = e.target.dataset.status;
+  loadTasks();
+});
+
+document.getElementById("compose-form").addEventListener("submit", async e => {
+  e.preventDefault();
+  const btn = document.getElementById("c-submit");
+  const instr = document.getElementById("c-instr").value.trim();
+  const model = document.getElementById("c-model").value;
+  if (!instr) return;
+  btn.disabled = true; btn.textContent = "Dispatching…";
+  try {
+    const r = await fetch(`${API}/tasks`, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({instruction: instr, model}),
+    });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    document.getElementById("c-instr").value = "";
+    await loadTasks();
+    await loadStats();
+  } catch (e) {
+    alert("Failed: " + e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = "Dispatch →";
+  }
+});
+
+async function loadSchedules() {
+  let data;
+  try {
+    const r = await fetch(`${API}/schedules`);
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    data = await r.json();
+  } catch (e) {
+    document.getElementById("schedules-body").innerHTML =
+      `<tr><td colspan="7" class="empty">Failed to load: ${fmt.esc(e.message)}</td></tr>`;
+    return;
+  }
+  schedulesData = data;
+
+  const body = document.getElementById("schedules-body");
+  if (data.length === 0) {
+    body.innerHTML = `<tr><td colspan="7" class="empty">No schedules yet — create one above to run agents automatically.</td></tr>`;
+    return;
+  }
+
+  body.innerHTML = data.map(s => {
+    const statusCls = s.enabled ? "b-active" : "b-paused";
+    const statusLabel = s.enabled ? "active" : "paused";
+    return `<tr class="sched-row">
+      <td>
+        <strong>${fmt.esc(s.name)}</strong><br>
+        <span class="num" style="font-size:11px">${fmt.esc(s.instruction.slice(0,90))}${s.instruction.length>90?"…":""}</span>
+      </td>
+      <td class="num">${fmt.esc(s.model.replace("claude-",""))}</td>
+      <td class="num">${fmt.interval(s.interval_minutes)}</td>
+      <td><span class="badge ${statusCls}">${statusLabel}</span></td>
+      <td class="num">${fmt.until(s.next_run_at)}</td>
+      <td class="num">${s.run_count}</td>
+      <td class="actions-cell">
+        <button class="secondary sm sched-run" data-id="${s.id}">Run now</button>
+        <button class="secondary sm sched-toggle" data-id="${s.id}" data-enabled="${s.enabled}">${s.enabled?"Pause":"Resume"}</button>
+        <button class="danger sm sched-delete" data-id="${s.id}">Delete</button>
+      </td>
+    </tr>`;
+  }).join("");
+
+  body.querySelectorAll(".sched-run").forEach(btn => {
+    btn.addEventListener("click", async e => {
+      e.stopPropagation();
+      const sched = schedulesData.find(s => s.id === btn.dataset.id);
+      if (!sched) return;
+      btn.disabled = true;
+      try {
+        await fetch(`${API}/tasks`, {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({instruction: sched.instruction, model: sched.model}),
+        });
+        document.querySelector('.tab-btn[data-tab="tasks"]').click();
+      } catch(err) { alert("Failed: " + err.message); btn.disabled = false; }
+    });
+  });
+
+  body.querySelectorAll(".sched-toggle").forEach(btn => {
+    btn.addEventListener("click", async e => {
+      e.stopPropagation();
+      btn.disabled = true;
+      try {
+        await fetch(`${API}/schedules/${btn.dataset.id}`, {
+          method: "PATCH",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({enabled: btn.dataset.enabled !== "true"}),
+        });
+        await loadSchedules();
+        await loadStats();
+      } catch(err) { alert("Failed: " + err.message); btn.disabled = false; }
+    });
+  });
+
+  body.querySelectorAll(".sched-delete").forEach(btn => {
+    btn.addEventListener("click", async e => {
+      e.stopPropagation();
+      if (!confirm("Delete this schedule?")) return;
+      btn.disabled = true;
+      try {
+        await fetch(`${API}/schedules/${btn.dataset.id}`, {method: "DELETE"});
+        await loadSchedules();
+        await loadStats();
+      } catch(err) { alert("Failed: " + err.message); btn.disabled = false; }
+    });
+  });
+}
+
+document.getElementById("sched-create-form").addEventListener("submit", async e => {
+  e.preventDefault();
+  const btn = document.getElementById("sf-submit");
+  btn.disabled = true; btn.textContent = "Creating…";
+  try {
+    const r = await fetch(`${API}/schedules`, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({
+        name: document.getElementById("sf-name").value.trim(),
+        instruction: document.getElementById("sf-instr").value.trim(),
+        model: document.getElementById("sf-model").value,
+        interval_minutes: parseInt(document.getElementById("sf-interval").value),
+        enabled: true,
+      }),
+    });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    document.getElementById("sf-name").value = "";
+    document.getElementById("sf-instr").value = "";
+    await loadSchedules();
+    await loadStats();
+  } catch (err) {
+    alert("Failed: " + err.message);
+  } finally {
+    btn.disabled = false; btn.textContent = "Create schedule →";
+  }
+});
+
+document.querySelectorAll(".tab-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    const tab = btn.dataset.tab;
+    document.getElementById("tab-tasks").style.display = tab === "tasks" ? "" : "none";
+    document.getElementById("tab-schedules").style.display = tab === "schedules" ? "" : "none";
+    if (tab === "schedules") loadSchedules();
+  });
+});
+
+function refresh() {
+  loadStats();
+  const active = document.querySelector(".tab-btn.active").dataset.tab;
+  if (active === "tasks") loadTasks();
+  else if (active === "schedules") loadSchedules();
+}
+
+refresh();
+setInterval(refresh, 4000);
+</script>
+</body>
+</html>
